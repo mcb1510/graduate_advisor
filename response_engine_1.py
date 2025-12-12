@@ -23,8 +23,16 @@ def _similarity(a: str, b: str) -> float:
 def _detect_list_query(text: str) -> bool:
     """Detect if the user is asking for a list of all faculty using regex-based intent detection."""
     q = text.lower()
-    pattern = r"(list|show|display|give).*(faculty|professors|everyone|all)"
-    return re.search(pattern, q) is not None
+    #pattern = r"(list|show|display|give).*(faculty|professors|everyone|all)"
+    #return re.search(pattern, q) is not None
+    patterns = [
+        r"(list|show|display|give|tell me).*(all|everyone|every).*(faculty|professors? )",
+        r"(list|show|display).*(faculty|professors?)",
+        r"(who are|what are).*(all|everyone).*(faculty|professors?)",
+        r"(all|everyone).*(faculty|professors? )",
+    ]
+    return any(re.search(pattern, q) for pattern in patterns)
+
 
 # HELPER CLASS FOR QUERY EXPANSION
 class QueryProcessor:
@@ -234,6 +242,13 @@ class ResponseEngine:
         """Return a human readable list of all faculty names."""
         if not self.faculty_ids:
             return "I do not have any faculty data loaded right now."
+        
+        # Clear conversation memory since we're starting fresh
+        self.conversation_memory = {
+            "last_query": None,
+            "last_retrieved":  None
+        }
+
         lines = [f"- {name}" for name in self.faculty_ids]
         return (
             "Here is the list of CS faculty I know about:\n\n"
@@ -424,42 +439,14 @@ class ResponseEngine:
         3) Inject them into a system message.
         4) Ask Llama to answer using ONLY that faculty context.
         """
-        # -------------------------------------------------------------
-        # NEW: Query Classification (Fixes HCI, jobs, concepts, etc.)
-        # -------------------------------------------------------------
-        query_type = self.classify_query_type(user_query.lower())
 
-        # Retrieve last professor if available
-        last = self.conversation_memory.get("last_retrieved")
-        last_prof = last[0]["name"] if last else None
-
-        if query_type == "followup_person" and last_prof:
-            return self._answer_followup_fact(last_prof, user_query)
-
-        if query_type == "general_concept":
-            # Not a follow-up → do NOT use fact mode
-            return self._answer_concept_definition(user_query)
-
-        # Handle follow-up queries using memory (Fix 3 - Option 3)
-        if self._is_followup(user_query):
-            last = self.conversation_memory.get("last_retrieved")
-            if last and len(last) > 0:
-                #return self._answer_for_specific_faculty(last[0]["name"], history=history)
-                # Route follow-ups into factual mode instead of advisor-summary mode
-                faculty_name = last[0]["name"]
-                return self._answer_followup_fact(faculty_name, user_query)
-
-
-        # Special case 1: list of all faculty
+        # PRIORITY CHECK 1: List all faculty (should happen first)
         if _detect_list_query(user_query) and self.faculty_ids:
             return self._list_all_faculty_text()
-
-        # Special case 2: check if the query directly mentions a faculty name
+        
+        # PRIORITY CHECK 2: Direct faculty name mentions
         if self.faculty_ids:
             q = user_query.lower()
-            # --------------------------------------------------------------
-            # SPECIAL CASE 2: Robust faculty name detection
-            # --------------------------------------------------------------
             query_tokens = q.split()
 
             for name in self.faculty_ids:
@@ -481,6 +468,28 @@ class ResponseEngine:
                     print("TOKEN FUZZY MATCH:", name)
                     return self._answer_for_specific_faculty(name, history=history)
 
+         # NOW do query classification for remaining queries
+        query_type = self.classify_query_type(user_query.lower())
+
+        # Retrieve last professor if available
+        last = self.conversation_memory.get("last_retrieved")
+        last_prof = last[0]["name"] if last else None
+
+        if query_type == "followup_person" and last_prof:
+            return self._answer_followup_fact(last_prof, user_query)
+
+        if query_type == "general_concept":
+            # Not a follow-up → do NOT use fact mode
+            return self._answer_concept_definition(user_query)
+
+        # Handle follow-up queries using memory (Fix 3 - Option 3)
+        if self._is_followup(user_query):
+            last = self.conversation_memory.get("last_retrieved")
+            if last and len(last) > 0:
+                #return self._answer_for_specific_faculty(last[0]["name"], history=history)
+                # Route follow-ups into factual mode instead of advisor-summary mode
+                faculty_name = last[0]["name"]
+                return self._answer_followup_fact(faculty_name, user_query)
 
         # Normal RAG retrieval
         retrieved = self.retrieve_faculty(user_query, top_k=top_k)
