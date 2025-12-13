@@ -12,12 +12,11 @@ requests
 # Python-dotenv - Loads environment variables from .env file
 # This is how we securely load the API token
 python-dotenv
-
-# streamlit
-# pandas
-# numpy
-# faiss-cpu
-# sentence-transformers
-# transformers
-# torch
-# spacy
+streamlit
+pandas
+numpy
+faiss-cpu
+sentence-transformers
+transformers
+torch
+spacy
