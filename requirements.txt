@@ -1,0 +1,23 @@
+# requirements.txt - Python Package Dependencies
+# Install all these with: pip install -r requirements.txt
+
+# Streamlit - Creates the web interface for the chatbot
+# Version: Latest stable version
+streamlit
+
+# Requests - Makes HTTP requests to HuggingFace API
+# This is how we talk to Mistral-7B
+requests
+
+# Python-dotenv - Loads environment variables from .env file
+# This is how we securely load the API token
+python-dotenv
+
+# streamlit
+# pandas
+# numpy
+# faiss-cpu
+# sentence-transformers
+# transformers
+# torch
+# spacy
