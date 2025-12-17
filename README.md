@@ -1,5 +1,4 @@
-# BSU Graduate Advisor AI
-
+# Retrieval-Augmented Conversational Advisor Recommendation for BSU CS Graduate Students
 An intelligent chatbot assistant that helps Computer Science students at Boise State University find suitable research advisors based on their interests, skills, and goals.
 
 ## Overview
